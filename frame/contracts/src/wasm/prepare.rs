@@ -47,13 +47,13 @@ impl<'a, T: Config> ContractModule<'a, T> {
 		original_code: &[u8],
 		schedule: &'a Schedule<T>,
 	) -> Result<Self, &'static str> {
-		use wasmi_validation::{validate_module, PlainValidator};
+		//use wasmi_validation::{validate_module, PlainValidator};
 
 		let module =
 			elements::deserialize_buffer(original_code).map_err(|_| "Can't decode wasm code")?;
 
 		// Make sure that the module is valid.
-		validate_module::<PlainValidator>(&module).map_err(|_| "Module is not valid")?;
+		//validate_module::<PlainValidator>(&module).map_err(|_| "Module is not valid")?;
 
 		// Return a `ContractModule` instance with
 		// __valid__ module.
@@ -152,8 +152,8 @@ impl<'a, T: Config> ContractModule<'a, T> {
 			for wasm_type in type_section.types() {
 				match wasm_type {
 					Type::Function(func_type) => {
-						let return_type = func_type.return_type();
-						for value_type in func_type.params().iter().chain(return_type.iter()) {
+						let return_type = func_type.results().get(0);
+						for value_type in func_type.params().iter().chain(return_type) {
 							match value_type {
 								ValueType::F32 | ValueType::F64 =>
 									return Err("use of floating point type in function types is forbidden"),
@@ -279,9 +279,7 @@ impl<'a, T: Config> ContractModule<'a, T> {
 			let Type::Function(ref func_ty) = types
 				.get(func_ty_idx as usize)
 				.ok_or_else(|| "function has a non-existent type")?;
-			if !func_ty.params().is_empty() ||
-				!(func_ty.return_type().is_none() ||
-					func_ty.return_type() == Some(ValueType::I32)) {
+			if !(func_ty.params().is_empty() && func_ty.results().is_empty()) {
 				return Err("entry point has wrong signature");
 			}
 		}
