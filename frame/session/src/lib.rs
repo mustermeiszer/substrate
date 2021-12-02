@@ -154,10 +154,10 @@ pub trait ShouldEndSession<BlockNumber> {
 pub struct PeriodicSessions<Period, Offset>(PhantomData<(Period, Offset)>);
 
 impl<
-		BlockNumber: Rem<Output = BlockNumber> + Sub<Output = BlockNumber> + Zero + PartialOrd,
-		Period: Get<BlockNumber>,
-		Offset: Get<BlockNumber>,
-	> ShouldEndSession<BlockNumber> for PeriodicSessions<Period, Offset>
+	BlockNumber: Rem<Output = BlockNumber> + Sub<Output = BlockNumber> + Zero + PartialOrd,
+	Period: Get<BlockNumber>,
+	Offset: Get<BlockNumber>,
+> ShouldEndSession<BlockNumber> for PeriodicSessions<Period, Offset>
 {
 	fn should_end_session(now: BlockNumber) -> bool {
 		let offset = Offset::get();
@@ -166,10 +166,10 @@ impl<
 }
 
 impl<
-		BlockNumber: AtLeast32BitUnsigned + Clone,
-		Period: Get<BlockNumber>,
-		Offset: Get<BlockNumber>,
-	> EstimateNextSessionRotation<BlockNumber> for PeriodicSessions<Period, Offset>
+	BlockNumber: AtLeast32BitUnsigned + Clone,
+	Period: Get<BlockNumber>,
+	Offset: Get<BlockNumber>,
+> EstimateNextSessionRotation<BlockNumber> for PeriodicSessions<Period, Offset>
 {
 	fn average_session_length() -> BlockNumber {
 		Period::get()
@@ -378,10 +378,10 @@ pub mod pallet {
 
 		/// A stable ID for a validator.
 		type ValidatorId: Member
-			+ Parameter
-			+ MaybeSerializeDeserialize
-			+ MaxEncodedLen
-			+ TryFrom<Self::AccountId>;
+		+ Parameter
+		+ MaybeSerializeDeserialize
+		+ MaxEncodedLen
+		+ TryFrom<Self::AccountId>;
 
 		/// A conversion from account ID to validator ID.
 		///
@@ -522,12 +522,12 @@ pub mod pallet {
 	/// The next session keys for a validator.
 	#[pallet::storage]
 	pub type NextKeys<T: Config> =
-		StorageMap<_, Twox64Concat, T::ValidatorId, T::Keys, OptionQuery>;
+	StorageMap<_, Twox64Concat, T::ValidatorId, T::Keys, OptionQuery>;
 
 	/// The owner of a key. The key is the `KeyTypeId` + the encoded key.
 	#[pallet::storage]
 	pub type KeyOwner<T: Config> =
-		StorageMap<_, Twox64Concat, (KeyTypeId, Vec<u8>), T::ValidatorId, OptionQuery>;
+	StorageMap<_, Twox64Concat, (KeyTypeId, Vec<u8>), T::ValidatorId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -643,6 +643,8 @@ impl<T: Config> Pallet<T> {
 			session_keys.iter().map(|(validator, _)| validator.clone()).collect::<Vec<_>>();
 		<Validators<T>>::put(&validators);
 
+		log::info!(target: "runtime::session", "This session validators: {:?}", session_keys);
+
 		if changed {
 			// reset disabled validators
 			<DisabledValidators<T>>::take();
@@ -656,6 +658,7 @@ impl<T: Config> Pallet<T> {
 
 		// Get next validator set.
 		let maybe_next_validators = T::SessionManager::new_session(session_index + 1);
+		log::info!(target: "runtime::session", "Session manager provided next validators: {:?}", maybe_next_validators);
 		let (next_validators, next_identities_changed) =
 			if let Some(validators) = maybe_next_validators {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
@@ -666,6 +669,7 @@ impl<T: Config> Pallet<T> {
 				(<Validators<T>>::get(), false)
 			};
 
+		log::info!(target: "runtime::session", "Next session validators: {:?}", next_validators);
 		// Queue next session keys.
 		let (queued_amalgamated, next_changed) = {
 			// until we are certain there has been a change, iterate the prior
@@ -699,12 +703,15 @@ impl<T: Config> Pallet<T> {
 			(queued_amalgamated, changed)
 		};
 
+		log::info!(target: "runtime::session", "Queued keys: {:?}", queued_amalgamated);
 		<QueuedKeys<T>>::put(queued_amalgamated.clone());
 		<QueuedChanged<T>>::put(next_changed);
 
+		log::info!(target: "runtime::session", "Depositing next session event");
 		// Record that this happened.
 		Self::deposit_event(Event::NewSession(session_index));
 
+		log::info!(target: "runtime::session", "Starting new session");
 		// Tell everyone about the new session keys.
 		T::SessionHandler::on_new_session::<T::Keys>(changed, &session_keys, &queued_amalgamated);
 	}
@@ -755,9 +762,9 @@ impl<T: Config> Pallet<T> {
 	/// that all validators should invoke `set_keys` before those keys are actually
 	/// required.
 	pub fn upgrade_keys<Old, F>(upgrade: F)
-	where
-		Old: OpaqueKeys + Member + Decode,
-		F: Fn(T::ValidatorId, Old) -> T::Keys,
+		where
+			Old: OpaqueKeys + Member + Decode,
+			F: Fn(T::ValidatorId, Old) -> T::Keys,
 	{
 		let old_ids = Old::key_ids();
 		let new_ids = T::Keys::key_ids();
@@ -934,11 +941,11 @@ impl<T: Config> frame_support::traits::DisabledValidators for Pallet<T> {
 pub struct FindAccountFromAuthorIndex<T, Inner>(sp_std::marker::PhantomData<(T, Inner)>);
 
 impl<T: Config, Inner: FindAuthor<u32>> FindAuthor<T::ValidatorId>
-	for FindAccountFromAuthorIndex<T, Inner>
+for FindAccountFromAuthorIndex<T, Inner>
 {
 	fn find_author<'a, I>(digests: I) -> Option<T::ValidatorId>
-	where
-		I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+		where
+			I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
 	{
 		let i = Inner::find_author(digests)?;
 
