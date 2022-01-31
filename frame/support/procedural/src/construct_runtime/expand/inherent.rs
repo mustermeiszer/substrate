@@ -45,7 +45,7 @@ pub fn expand_outer_inherent(
 	quote! {
 		#( #query_inherent_part_macros )*
 
-		trait InherentDataExt {
+		pub trait InherentDataExt {
 			fn create_extrinsics(&self) ->
 				#scrate::inherent::Vec<<#block as #scrate::inherent::BlockT>::Extrinsic>;
 			fn check_extrinsics(&self, block: &#block) -> #scrate::inherent::CheckInherentsResult;
